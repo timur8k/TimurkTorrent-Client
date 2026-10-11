@@ -1,0 +1,45 @@
+name: Build TimurkTorrent Client
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Windows binaries
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [x64, x86]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.arch == 'x64' && 'MINGW64' || 'MINGW32' }}
+          update: true
+          install: >-
+            git
+            cmake
+            ninja
+            gcc
+            qt6-base
+            libtorrent-rasterbar
+
+      - name: Build TimurkTorrent
+        shell: msys2 {0}
+        run: |
+          mkdir build && cd build
+          cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+          ninja
+
+      - name: Archive Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TimurkTorrent-Client-Win-${{ matrix.arch }}
+          path: build/*.exe
